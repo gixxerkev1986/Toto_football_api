@@ -27,23 +27,32 @@ EUROPEAN_LEAGUES = {
     "Scottish Premiership": 179
 }
 
-def get_current_season(league_id):
-    """Haalt het actieve seizoen op voor een competitie."""
+def get_active_season(league_id):
+    """Zoekt het seizoen waar vandaag binnen valt."""
     url = f"{BASE_URL}/leagues?id={league_id}"
     response = requests.get(url, headers=HEADERS)
     data = response.json()
+
+    today = datetime.now().date()
+
     try:
-        return data['response'][0]['seasons'][-1]['year']
-    except (IndexError, KeyError):
-        logger.warning(f"Kon seizoen niet vinden voor league ID {league_id}")
+        for season in data["response"][0]["seasons"]:
+            start = datetime.strptime(season["start"], "%Y-%m-%d").date()
+            end = datetime.strptime(season["end"], "%Y-%m-%d").date()
+            if start <= today <= end:
+                return season["year"]
+        logger.warning(f"Geen actief seizoen gevonden voor league ID {league_id}, fallback naar laatste.")
+        return data["response"][0]["seasons"][-1]["year"]
+    except Exception as e:
+        logger.error(f"Fout bij ophalen seizoen voor league {league_id}: {e}")
         return 2023  # fallback
 
 def get_upcoming_matches(days_ahead=3):
     matches = []
 
     for league_name, league_id in EUROPEAN_LEAGUES.items():
-        season = get_current_season(league_id)
-        logger.info(f"{league_name} (ID: {league_id}) - Seizoen: {season}")
+        season = get_active_season(league_id)
+        logger.info(f"{league_name} (ID: {league_id}) - Actief seizoen: {season}")
 
         for day_offset in range(days_ahead):
             date = (datetime.now() + timedelta(days=day_offset)).strftime('%Y-%m-%d')
