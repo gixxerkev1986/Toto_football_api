@@ -8,31 +8,59 @@ logger = logging.getLogger(__name__)
 API_KEY = "fe73752800e88b68a8f31ebeeba89604"
 BASE_URL = "https://v3.football.api-sports.io"
 
-def get_upcoming_matches(days_ahead=3):
-    headers = {
-        "X-RapidAPI-Key": API_KEY,
-        "X-RapidAPI-Host": "v3.football.api-sports.io"
-    }
+HEADERS = {
+    "X-RapidAPI-Key": API_KEY,
+    "X-RapidAPI-Host": "v3.football.api-sports.io"
+}
 
-    european_leagues = [39, 78, 135, 61, 140, 94, 88, 262, 203, 195]  # Premier League, Bundesliga, Serie A, etc.
+# Europese competities met naam + ID
+EUROPEAN_LEAGUES = {
+    "Premier League": 39,
+    "Bundesliga": 78,
+    "Serie A": 135,
+    "Ligue 1": 61,
+    "La Liga": 140,
+    "Eredivisie": 88,
+    "Belgian Pro League": 94,
+    "Swiss Super League": 203,
+    "Austrian Bundesliga": 195,
+    "Scottish Premiership": 179
+}
+
+def get_current_season(league_id):
+    """Haalt het actieve seizoen op voor een competitie."""
+    url = f"{BASE_URL}/leagues?id={league_id}"
+    response = requests.get(url, headers=HEADERS)
+    data = response.json()
+    try:
+        return data['response'][0]['seasons'][-1]['year']
+    except (IndexError, KeyError):
+        logger.warning(f"Kon seizoen niet vinden voor league ID {league_id}")
+        return 2023  # fallback
+
+def get_upcoming_matches(days_ahead=3):
     matches = []
 
-    for day_offset in range(days_ahead):
-        date = (datetime.now() + timedelta(days=day_offset)).strftime('%Y-%m-%d')
-        for league_id in european_leagues:
+    for league_name, league_id in EUROPEAN_LEAGUES.items():
+        season = get_current_season(league_id)
+        logger.info(f"{league_name} (ID: {league_id}) - Seizoen: {season}")
+
+        for day_offset in range(days_ahead):
+            date = (datetime.now() + timedelta(days=day_offset)).strftime('%Y-%m-%d')
             url = f"{BASE_URL}/fixtures"
-            response = requests.get(url, headers=headers, params={
+            response = requests.get(url, headers=HEADERS, params={
                 "league": league_id,
-                "season": 2024,
+                "season": season,
                 "date": date,
                 "timezone": "Europe/Amsterdam"
             })
             data = response.json()
+            count = len(data.get("response", []))
+            logger.info(f"  {date}: {count} wedstrijden gevonden")
 
             for match in data.get("response", []):
                 fixture = match["fixture"]
                 teams = match["teams"]
-                logger.info(f"{teams['home']['name']} vs {teams['away']['name']} on {fixture['date']}")
                 matches.append({
                     "home": teams['home']['name'],
                     "away": teams['away']['name'],
