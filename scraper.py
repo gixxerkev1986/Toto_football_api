@@ -1,4 +1,3 @@
-
 import requests
 import logging
 from datetime import datetime
@@ -20,7 +19,7 @@ def get_upcoming_matches():
         "date": datetime.now().strftime('%Y-%m-%d')
     }
 
-    european_leagues = [39, 78, 135, 61, 140, 94, 88, 262, 203, 195]  # Premier League, Bundesliga, Serie A, Ligue 1, La Liga, etc.
+    european_leagues = [39, 78, 135, 61, 140, 94, 88, 262, 203, 195]  # Premier League, Bundesliga, Serie A, etc.
 
     matches = []
 
