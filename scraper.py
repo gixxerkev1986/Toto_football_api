@@ -1,5 +1,6 @@
 import requests
 import logging
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,30 +27,33 @@ EUROPEAN_LEAGUES = {
     "Scottish Premiership": 179
 }
 
-def get_upcoming_matches():
+def get_upcoming_matches(days_ahead=3):
     matches = []
 
     for league_name, league_id in EUROPEAN_LEAGUES.items():
-        logger.info(f"{league_name} (ID: {league_id}) - ophalen volgende 10 wedstrijden")
+        logger.info(f"{league_name} (ID: {league_id})")
 
-        url = f"{BASE_URL}/fixtures"
-        response = requests.get(url, headers=HEADERS, params={
-            "league": league_id,
-            "next": 10,
-            "timezone": "Europe/Amsterdam"
-        })
-        data = response.json()
-        count = len(data.get("response", []))
-        logger.info(f"  {count} wedstrijden gevonden")
-
-        for match in data.get("response", []):
-            fixture = match["fixture"]
-            teams = match["teams"]
-            matches.append({
-                "home": teams['home']['name'],
-                "away": teams['away']['name'],
-                "date": fixture['date'],
-                "league": match["league"]["name"]
+        for day_offset in range(days_ahead):
+            date = (datetime.now() + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+            url = f"{BASE_URL}/fixtures"
+            response = requests.get(url, headers=HEADERS, params={
+                "league": league_id,
+                "season": 2023,  # LET OP: dit moet nog correct ingesteld worden per competitie
+                "date": date,
+                "timezone": "Europe/Amsterdam"
             })
+            data = response.json()
+            count = len(data.get("response", []))
+            logger.info(f"  {date}: {count} wedstrijden gevonden")
+
+            for match in data.get("response", []):
+                fixture = match["fixture"]
+                teams = match["teams"]
+                matches.append({
+                    "home": teams['home']['name'],
+                    "away": teams['away']['name'],
+                    "date": fixture['date'],
+                    "league": match["league"]["name"]
+                })
 
     return matches
