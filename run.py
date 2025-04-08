@@ -1,5 +1,4 @@
-
-from scraper_api import get_upcoming_matches
+from scraper import get_upcoming_matches
 
 if __name__ == "__main__":
     matches = get_upcoming_matches()
